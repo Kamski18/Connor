@@ -2,7 +2,6 @@ import telebot
 import datetime
 from dotenv import load_dotenv
 import wikipedia as wiki
-import pywhatkit as pai
 import webbrowser
 import os
 
