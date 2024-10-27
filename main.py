@@ -64,7 +64,7 @@ def tell(message):
     target = "is"
     locate = text.find(target)
     after = text[locate + len(target) + 1:]
-    key = after.lower()
+    key = after.capitalize()
     try:
         h = wiki.summary(key, sentences=3)
         bot.edit_message_text(chat_id=message.chat.id, message_id=load, text=h)
