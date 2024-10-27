@@ -69,7 +69,7 @@ def tell(message):
         h = wiki.summary(key, sentences=3)
         bot.edit_message_text(chat_id=message.chat.id, message_id=load, text=h)
 
-    except wiki.exceptions.PageError:
+    except wiki.exceptions.PageError, wiki.exceptions.DisambiguationError:
         h = wiki.search(key)
         
         bot.send_message(message.chat.id, f"Page for {key} cannot be found. Perhaps try again with these keywords:\n\n{h}")
