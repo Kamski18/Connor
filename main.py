@@ -32,7 +32,7 @@ def save(message):
     #what is judas
     target = "save"
     locate = text.find(target)
-    after = text[locate + len(target) + 2:]
+    after = text[locate + len(target) + 1:]
     title = after.lower()
     title = title.replace(",", "\n")
     try:
@@ -47,7 +47,7 @@ def play(message):
     #what is judas
     target = "play"
     locate = text.find(target)
-    after = text[locate + len(target) + 2:]
+    after = text[locate + len(target) + 1:]
     title = after.lower()
     try:
         h = f"https://www.youtube.com/results?search_query={title.replace(' ', '+')}"
@@ -64,7 +64,7 @@ def tell(message):
     target = "is"
     locate = text.find(target)
     after = text[locate + len(target) + 1:]
-    key = after.capitalize()
+    key = after
     try:
         h = wiki.summary(key, sentences=3)
         bot.edit_message_text(chat_id=message.chat.id, message_id=load, text=h)
