@@ -35,7 +35,7 @@ def save(message):
     target = "save"
     locate = text.find(target)
     after = text[locate + len(target) + 1:]
-    title = after.lower()
+    title = after
     title.replace(",", "\n")
     try:
         store.append(title)
