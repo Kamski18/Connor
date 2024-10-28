@@ -34,7 +34,7 @@ def save(message):
     locate = text.find(target)
     after = text[locate + len(target) + 2:]
     title = after.lower()
-    title.replace(",", "\n")
+    title = title.replace(",", "\n")
     try:
         store.append(title)
         bot.edit_message_text(chat_id=message.chat.id, message_id=load, text="all work are saved Sir")
