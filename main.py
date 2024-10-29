@@ -110,7 +110,7 @@ def bismillah(message):
         font = cv2.FONT_HERSHEY_COMPLEX
         font_scale = 1
         color = (255, 255, 255)  # White text
-        thickness = 3
+        thickness = 1
 
         # Use minSize because for not 
         # bothering with extra-small 
@@ -134,7 +134,7 @@ def bismillah(message):
                 # every recognized sign
                 cv2.rectangle(img_rgb, (x, y), 
                             (x + height, y + width), 
-                            (85,142,199), 5)
+                            (85,142,199), 2)
 
         text_size = cv2.getTextSize(label, font, font_scale, thickness)[0]
         text_x = x + (width - text_size[0]) // 2  # Center the text
