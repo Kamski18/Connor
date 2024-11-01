@@ -6,10 +6,13 @@ import webbrowser
 import os
 import requests
 import cv2
+import yt_dlp as y
+import time
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 bot = telebot.TeleBot(API_KEY)
+#bot = telebot.TeleBot("6969031808:AAEo3LS0cUEJLbd92JnpHitD7rcB4tOi52c")
 
 store=[]
 
@@ -35,8 +38,8 @@ def save(message):
     target = "save"
     locate = text.find(target)
     after = text[locate + len(target) + 1:]
-    title = after
-    title = title.replace(",", "\n")
+    title = after.lower()
+    title.replace(",", "\n")
     try:
         store.append(title)
         bot.edit_message_text(chat_id=message.chat.id, message_id=load, text="all work are saved Sir")
@@ -110,12 +113,12 @@ def bismillah(message):
         font = cv2.FONT_HERSHEY_COMPLEX
         font_scale = 1
         color = (255, 255, 255)  # White text
-        thickness = 1
+        thickness = 3
 
         # Use minSize because for not 
         # bothering with extra-small 
         # dots that would look like STOP signs
-        stop_data = cv2.CascadeClassifier('detect.xml')
+        stop_data = cv2.CascadeClassifier('cv2/detect.xml')
         
         found = stop_data.detectMultiScale(img_gray, 
                                         minSize =(20, 20))
@@ -134,7 +137,7 @@ def bismillah(message):
                 # every recognized sign
                 cv2.rectangle(img_rgb, (x, y), 
                             (x + height, y + width), 
-                            (85,142,199), 2)
+                            (85,142,199), 5)
 
         text_size = cv2.getTextSize(label, font, font_scale, thickness)[0]
         text_x = x + (width - text_size[0]) // 2  # Center the text
@@ -155,6 +158,48 @@ def bismillah(message):
 
 
 #---CV2---#
+
+#---tt download---#
+def t(message):
+    text = message.text
+    load = bot.send_message(message.chat.id, "Downloading...").message_id
+    #what is judas
+    target = "download"
+    locate = text.find(target)
+    after = text[locate + len(target) + 1:]
+    link = after
+    try:
+        # Specify the TikTok video URL
+        tiktok_url = link  # Replace with your video URL
+        folder = "download/"
+        # Configure yt-dlp options
+        ydl_opts = {
+            'outtmpl': f'{folder}/%(title)s.%(ext)s',  # Specify the download directory
+            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]',  # Get best quality
+            'noplaylist': True,  # Download only the video, not any playlists or extra content
+        }
+
+        # Download the video
+        with y.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([tiktok_url])
+        videof = os.listdir(folder)
+        vfile = None
+
+        for file in videof:
+            if file.endswith(".mp4"):
+                vfile = os.path.join(folder, file)
+                break
+        
+        if vfile:
+            with open(vfile, "rb") as video:
+                media = telebot.types.InputMediaVideo(video, "Here you go Sir.")
+                bot.edit_message_media(media, message.chat.id, load)
+                print("video sent Successfully")
+                os.remove(vfile)
+    except y.DownloadError:
+        bot.send_message(message.chat.id, f"Link may be unrecognizable Sir.")
+
+#---tt download---#
 
 @bot.message_handler(func=lambda message: message.text is not None and not message.photo)
 def take_command(message):
@@ -183,6 +228,8 @@ def take_command(message):
         update(message)
     elif "clear" in command.lower():
         clear(message)
+    elif "download" in command.lower():
+        t(message)
     else:
         pass
 
