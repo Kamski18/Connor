@@ -215,9 +215,9 @@ def t(message):
 
 
 
-        elif "youtu.be" or "youtube" in app:
+        elif "youtu.be" or "youtube" or "facebook" in app:
             try:
-                folder = "D:/addin/Connor/download"
+                folder = "download/"
 
                 ydl_opts = {
                     'outtmpl': f'{folder}/%(title)s.%(ext)s',  # Specify the download directory
@@ -254,7 +254,7 @@ def t(message):
 
         elif "instagram" in app:
             try:
-                folder = "D:/addin/Connor/download"
+                folder = "download/"
 
                 ydl_opts = {
                     'outtmpl': f'{folder}/%(title)s.%(ext)s',  # Specify the download directory
