@@ -1,18 +1,15 @@
 import telebot
-import datetime
 from dotenv import load_dotenv
 import wikipedia as wiki
-import webbrowser
 import os
 import requests
 import cv2
 import yt_dlp as y
-import time
 
-load_dotenv()
-API_KEY = os.getenv("API_KEY")
-bot = telebot.TeleBot(API_KEY)
-#bot = telebot.TeleBot("6969031808:AAEo3LS0cUEJLbd92JnpHitD7rcB4tOi52c")
+#load_dotenv()
+#API_KEY = os.getenv("API_KEY")
+#bot = telebot.TeleBot(API_KEY)
+bot = telebot.TeleBot("6969031808:AAEo3LS0cUEJLbd92JnpHitD7rcB4tOi52c")
 
 store=[]
 
@@ -39,7 +36,7 @@ def save(message):
     locate = text.find(target)
     after = text[locate + len(target) + 1:]
     title = after.lower()
-    title.replace(",", "\n")
+    title.replace(",", "/n")
     try:
         store.append(title)
         bot.edit_message_text(chat_id=message.chat.id, message_id=load, text="all work are saved Sir")
@@ -74,12 +71,12 @@ def tell(message):
         h = wiki.summary(key, sentences=3)
         h1 = wiki.search(key)
         bot.edit_message_text(chat_id=message.chat.id, message_id=load, text=h)
-        bot.send_message(message.chat.id, f"Anything else Sir:\n\n{h1}")
+        bot.send_message(message.chat.id, f"Anything else Sir:/n/n{h1}")
 
     except wiki.exceptions.PageError:
         h = wiki.search(key)
         
-        bot.send_message(message.chat.id, f"Page for {key} cannot be found. Perhaps try again with these keywords:\n\n{h}")
+        bot.send_message(message.chat.id, f"Page for {key} cannot be found. Perhaps try again with these keywords:/n/n{h}")
         
 #---CV2---#
 
@@ -159,50 +156,143 @@ def bismillah(message):
 
 #---CV2---#
 
-#---tt download---#
+#--- download ---#
 def t(message):
     text = message.text
-    load = bot.send_message(message.chat.id, "Downloading...").message_id
-    #what is judas
-    target = "download"
-    locate = text.find(target)
-    after = text[locate + len(target) + 1:]
-    link = after
-    try:
-        # Specify the TikTok video URL
-        tiktok_url = link  # Replace with your video URL
-        folder = "download/"
-        # Configure yt-dlp options
-        ydl_opts = {
-            'outtmpl': f'{folder}/%(title)s.%(ext)s',  # Specify the download directory
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]',  # Get best quality
-            'noplaylist': True,  # Download only the video, not any playlists or extra content
-        }
+    if "http" not in message.text.lower():
+        return
+    elif "http" in message.text.lower():
+        if "download" in text.lower():
+            load = bot.send_message(message.chat.id, "Downloading...").message_id
+            target = "download"
+            locate = text.find(target)
+            after = text[locate + len(target) + 1:]
+            link = after
+        elif "download" not in text.lower():
+            link = text
+            load = bot.send_message(message.chat.id, "Downloading...").message_id
+        try:
+            app = link.split("/")
+            app = app[2]
+            print(app)
+        except IndexError:
+            return
 
-        # Download the video
-        with y.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([tiktok_url])
-        videof = os.listdir(folder)
-        vfile = None
+        if "tiktok" in app:
+                # tiktok
+            try:
+                # Specify the TikTok video URL
+                tiktok_url = link  # Replace with your video URL
+                folder = "download/"
+                #folder = "D:/addin/Connor/download"
+                # Configure yt-dlp options
+                ydl_opts = {
+                    'outtmpl': f'{folder}/%(title)s.%(ext)s',  # Specify the download directory
+                    'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]',  # Get best quality
+                    'noplaylist': True,  # Download only the video, not any playlists or extra content
+                }
 
-        for file in videof:
-            if file.endswith(".mp4"):
-                vfile = os.path.join(folder, file)
-                break
-        
-        if vfile:
-            with open(vfile, "rb") as video:
-                media = telebot.types.InputMediaVideo(video, "Here you go Sir.")
-                bot.edit_message_media(media, message.chat.id, load)
-                print("video sent Successfully")
-                os.remove(vfile)
-    except y.DownloadError:
-        bot.send_message(message.chat.id, f"Link may be unrecognizable Sir.")
+                # Download the video
+                with y.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([tiktok_url])
+                videof = os.listdir(folder)
+                vfile = None
 
+                for file in videof:
+                    if file.endswith(".mp4"):
+                        vfile = os.path.join(folder, file)
+                        break
+                
+                if vfile:
+                    with open(vfile, "rb") as video:
+                        media = telebot.types.InputMediaVideo(video, "Here you go Sir.")
+                        bot.edit_message_media(media, message.chat.id, load)
+                        print("video sent Successfully")
+                        os.remove(vfile)
+            except y.DownloadError:
+                bot.send_message(message.chat.id, f"Link may be unrecognizable Sir.")
+
+
+
+
+        elif "youtu.be" or "youtube" in app:
+            try:
+                folder = "D:/addin/Connor/download"
+
+                ydl_opts = {
+                    'outtmpl': f'{folder}/%(title)s.%(ext)s',  # Specify the download directory
+                    'format': "best",  # Get best quality
+                }
+
+                with y.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([link])
+                videof = os.listdir(folder)
+                vfile = None
+                mp4_files = [file for file in videof if file.endswith(".mp4")]
+                if mp4_files:  # Check if the list is not empty
+                    # Sort by modification time to find the most recently downloaded video
+                    vfile = max(mp4_files, key=lambda x: os.path.getmtime(os.path.join(folder, x)))
+
+                for file in videof:
+                    if file.endswith(".mp4"):
+                        vfile = os.path.join(folder, file)
+                        break
+                
+                if vfile:
+                    try:
+                        with open(vfile, "rb") as video:
+                            media = telebot.types.InputMediaVideo(video, "Here you go Sir.")
+                            bot.edit_message_media(media, message.chat.id, load)
+                            print("video sent Successfully")
+                    finally:
+                        if os.path.exists(vfile):
+                            os.remove(vfile)
+                            print(f"Deleted the video file: {vfile}")
+
+            except y.DownloadError:
+                bot.send_message(message.chat.id, f"Link may be unrecognizable Sir.")
+
+        elif "instagram" in app:
+            try:
+                folder = "D:/addin/Connor/download"
+
+                ydl_opts = {
+                    'outtmpl': f'{folder}/%(title)s.%(ext)s',  # Specify the download directory
+                    'format': "best",  # Get best quality
+                }
+
+                with y.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([link])
+                videof = os.listdir(folder)
+                vfile = None
+                mp4_files = [file for file in videof if file.endswith(".mp4")]
+                if mp4_files:  # Check if the list is not empty
+                    # Sort by modification time to find the most recently downloaded video
+                    vfile = max(mp4_files, key=lambda x: os.path.getmtime(os.path.join(folder, x)))
+
+                for file in videof:
+                    if file.endswith(".mp4"):
+                        vfile = os.path.join(folder, file)
+                        break
+                
+                if vfile:
+                    try:
+                        with open(vfile, "rb") as video:
+                            media = telebot.types.InputMediaVideo(video, "Here you go Sir.")
+                            bot.edit_message_media(media, message.chat.id, load)
+                            print("video sent Successfully")
+                    finally:
+                        if os.path.exists(vfile):
+                            os.remove(vfile)
+                            print(f"Deleted the video file: {vfile}")
+
+            except y.DownloadError:
+                bot.send_message(message.chat.id, f"Link may be unrecognizable Sir.")
 #---tt download---#
 
 @bot.message_handler(func=lambda message: message.text is not None and not message.photo)
 def take_command(message):
+    print(f"message: {message.text}")
     command = message.text
     if "connor" in message.text.lower():
         print(message.text)
@@ -228,10 +318,8 @@ def take_command(message):
         update(message)
     elif "clear" in command.lower():
         clear(message)
-    elif "download" in command.lower():
-        t(message)
     else:
-        pass
+        t(message)
 
 
 
