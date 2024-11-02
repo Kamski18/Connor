@@ -184,7 +184,7 @@ def t(message):
                 # Specify the TikTok video URL
                 tiktok_url = link  # Replace with your video URL
                 folder = "download/"
-                #folder = "D:/addin/Connor/download"
+                #folder = "download/"
                 # Configure yt-dlp options
                 ydl_opts = {
                     'outtmpl': f'{folder}/%(title)s.%(ext)s',  # Specify the download directory
@@ -215,7 +215,7 @@ def t(message):
 
 
 
-        elif "youtu.be" or "youtube" or "facebook" in app:
+        elif "youtu.be" or "youtube" in app:
             try:
                 folder = "download/"
 
@@ -285,7 +285,42 @@ def t(message):
                         if os.path.exists(vfile):
                             os.remove(vfile)
                             print(f"Deleted the video file: {vfile}")
+        
+            except y.DownloadError:
+                bot.send_message(message.chat.id, f"Link may be unrecognizable Sir.")
+        elif "facebook" in app:
+            try:
+                folder = "download/"
 
+                ydl_opts = {
+                    'outtmpl': f'{folder}/%(title)s.%(ext)s',  # Specify the download directory
+                    'format': "best",  # Get best quality
+                }
+
+                with y.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([link])
+                videof = os.listdir(folder)
+                vfile = None
+                mp4_files = [file for file in videof if file.endswith(".mp4")]
+                if mp4_files:  # Check if the list is not empty
+                    # Sort by modification time to find the most recently downloaded video
+                    vfile = max(mp4_files, key=lambda x: os.path.getmtime(os.path.join(folder, x)))
+
+                for file in videof:
+                    if file.endswith(".mp4"):
+                        vfile = os.path.join(folder, file)
+                        break
+                
+                if vfile:
+                    try:
+                        with open(vfile, "rb") as video:
+                            media = telebot.types.InputMediaVideo(video, "Here you go Sir.")
+                            bot.edit_message_media(media, message.chat.id, load)
+                            print("video sent Successfully")
+                    finally:
+                        if os.path.exists(vfile):
+                            os.remove(vfile)
+                            print(f"Deleted the video file: {vfile}")
             except y.DownloadError:
                 bot.send_message(message.chat.id, f"Link may be unrecognizable Sir.")
 #---tt download---#
