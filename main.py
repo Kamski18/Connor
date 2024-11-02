@@ -17,6 +17,9 @@ store=[]
 def start(message):
     pass
 
+def guide(message):
+    bot.send_message(message.chat.id, "save\nupdate\nclear\nplay\ncommand\n\npublic downloader\nyt(short or not)\ntiktok\ninstagram\nfacebook")
+
 def clear(message):
     store.clear()
     bot.send_message(message.chat.id, "All work hass been cleared Sir.")
@@ -353,6 +356,8 @@ def take_command(message):
         update(message)
     elif "clear" in command.lower():
         clear(message)
+    elif "command" in command.lower():
+        guide(message)
     else:
         t(message)
 
