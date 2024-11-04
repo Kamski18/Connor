@@ -118,7 +118,7 @@ def bismillah(message):
         # Use minSize because for not 
         # bothering with extra-small 
         # dots that would look like STOP signs
-        stop_data = cv2.CascadeClassifier('cv2/detect.xml')
+        stop_data = cv2.CascadeClassifier('detect.xml')
         
         found = stop_data.detectMultiScale(img_gray, 
                                         minSize =(20, 20))
