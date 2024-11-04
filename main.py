@@ -358,8 +358,10 @@ def take_command(message):
         clear(message)
     elif "command" in command.lower():
         guide(message)
-    else:
+    elif "http" in command.lower():
         t(message)
+    else:
+        bismillah(message)
 
 
 
