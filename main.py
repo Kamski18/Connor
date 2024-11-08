@@ -9,7 +9,7 @@ import yt_dlp as y
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 bot = telebot.TeleBot(API_KEY)
-#bot = telebot.TeleBot("6969031808:AAEo3LS0cUEJLbd92JnpHitD7rcB4tOi52c")
+#bot = telebot.TeleBo9t("6969031808:AAEo3LS0cUEJLbd92JnpHitD7rcB4tOi52c")
 
 store=[]
 
