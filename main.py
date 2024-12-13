@@ -5,6 +5,7 @@ import os
 import requests
 import cv2
 import yt_dlp as y
+import ffmpeg
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
@@ -245,6 +246,13 @@ def t(message):
                 if vfile:
                     try:
                         with open(vfile, "rb") as video:
+                            compressed_file = f"{os.path.splitext(vfile)[0]}_compressed.mp4"
+                            ffmpeg.input(vfile).output(compressed_file, video_bitrate='1M').run()
+
+# Replace vfile with compressed_file for sending
+                             vfile = compressed_file
+                            
+ 
                             media = telebot.types.InputMediaVideo(video, "Here you go Sir.")
                             bot.edit_message_media(media, message.chat.id, load)
                             print("video sent Successfully")
