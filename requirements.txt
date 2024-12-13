@@ -2,4 +2,5 @@ pyTelegramBotAPI==4.23.0
 wikipedia==1.4.0
 python-dotenv==1.0.1
 opencv-python-headless==4.10.0.84
+ffmpeg-python==0.2.0
 yt-dlp[default] @ git+https://github.com/yt-dlp/yt-dlp.git@master
