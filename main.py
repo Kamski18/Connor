@@ -224,7 +224,8 @@ def t(message):
 
                 ydl_opts = {
                     'outtmpl': f'{folder}/%(title)s.%(ext)s',  # Specify the download directory
-                    'format': "best",  # Get best quality
+                    'format': "best",
+                    'listsformats': 'True',# Get best quality
                 }
 
                 with y.YoutubeDL(ydl_opts) as ydl:
