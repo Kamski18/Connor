@@ -5,7 +5,6 @@ import os
 import requests
 import cv2
 import yt_dlp as y
-import ffmpeg
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
@@ -225,8 +224,7 @@ def t(message):
 
                 ydl_opts = {
                     'outtmpl': f'{folder}/%(title)s.%(ext)s',  # Specify the download directory
-                    'format': "best",
-                    'listsformats': 'True',# Get best quality
+                    'format': "best",  # Get best quality
                 }
 
                 with y.YoutubeDL(ydl_opts) as ydl:
@@ -246,16 +244,12 @@ def t(message):
                 if vfile:
                     try:
                         with open(vfile, "rb") as video:
-                            compressed_file = f"{os.path.splitext(vfile)[0]}_compressed.mp4"
-                            ffmpeg.input(vfile).output(compressed_file, video_bitrate='1M').run()
-
-# Replace vfile with compressed_file for sending
-                            vfile = compressed_file
-                            
- 
                             media = telebot.types.InputMediaVideo(video, "Here you go Sir.")
                             bot.edit_message_media(media, message.chat.id, load)
                             print("video sent Successfully")
+                    except telebot.apihelper.ApiTelegramException as e:
+                        if "Request Entity Too Large" in str(e):
+                            bot.send_message(message.chat.id, "The media is too large. Please try with a smaller file.")
                     finally:
                         if os.path.exists(vfile):
                             os.remove(vfile)
