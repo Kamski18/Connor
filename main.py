@@ -1,374 +1,150 @@
-import telebot
-from dotenv import load_dotenv
-import wikipedia as wiki
 import os
 import requests
 import cv2
+import wikipedia as wiki
 import yt_dlp as y
+def from_dotenv
+from dotenv import load_dotenv
+import telebot
 
+# Load environment variables
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 bot = telebot.TeleBot(API_KEY)
-#bot = telebot.TeleBo9t("6969031808:AAEo3LS0cUEJLbd92JnpHitD7rcB4tOi52c")
 
-store=[]
+# In-memory storage for tasks
+store = []
 
-@bot.message_handler(command=["start"])
+# Command handlers
+@bot.message_handler(commands=["start"])
 def start(message):
-    pass
+    bot.send_message(message.chat.id, "Welcome! Type 'command' to see available commands.")
 
 def guide(message):
-    bot.send_message(message.chat.id, "save\nupdate\nclear\nplay\ncommand\n\npublic downloader\nyt(short or not)\ntiktok\ninstagram\nfacebook")
+    bot.send_message(
+        message.chat.id,
+        "Available commands:\n" \
+        "save\nupdate\nclear\nplay\ncommand\n\n" \
+        "Public downloader:\nyt (short or not)\ntiktok\ninstagram\nfacebook"
+    )
 
 def clear(message):
     store.clear()
-    bot.send_message(message.chat.id, "All work hass been cleared Sir.")
+    bot.send_message(message.chat.id, "All tasks have been cleared, Sir.")
 
 def update(message):
-    try:
-        bot.send_message(message.chat.id, store)
-        bot.send_message(message.chat.id, "Goodluck Sir.")
-    except telebot.apihelper.ApiTelegramException:
-        bot.send_message(message.chat.id, "No work has been saved Sir..")
+    if store:
+        bot.send_message(message.chat.id, "Saved tasks:\n" + "\n".join(store))
+    else:
+        bot.send_message(message.chat.id, "No tasks saved, Sir.")
 
 def save(message):
-    text = message.text
-    load = bot.send_message(message.chat.id, "Loading...").message_id
-    #what is judas
-    target = "save"
-    locate = text.find(target)
-    after = text[locate + len(target) + 1:]
-    title = after.lower()
-    title.replace(",", "/n")
-    try:
-        store.append(title)
-        bot.edit_message_text(chat_id=message.chat.id, message_id=load, text="all work are saved Sir")
-    except:
-        bot.send_message(message.chat.id, "Unable to save it Sir..")
+    task = message.text.replace("save", "").strip()
+    if task:
+        store.append(task)
+        bot.send_message(message.chat.id, "Task saved successfully, Sir.")
+    else:
+        bot.send_message(message.chat.id, "No task provided, Sir.")
 
 def play(message):
-    text = message.text
-    load = bot.send_message(message.chat.id, "Loading...").message_id
-    #what is judas
-    target = "play"
-    locate = text.find(target)
-    after = text[locate + len(target) + 1:]
-    title = after.lower()
-    try:
-        h = f"https://www.youtube.com/results?search_query={title.replace(' ', '+')}"
-        bot.edit_message_text(chat_id=message.chat.id, message_id=load, text=h)
-        #pai.playonyt(title)
-    except:
-        bot.send_message(message.chat.id, "Unable to search for it Sir.")
-
+    query = message.text.replace("play", "").strip()
+    if query:
+        youtube_link = f"https://www.youtube.com/results?search_query={query.replace(' ', '+')}"
+        bot.send_message(message.chat.id, f"Search link: {youtube_link}")
+    else:
+        bot.send_message(message.chat.id, "No query provided, Sir.")
 
 def tell(message):
-    text = message.text
-    load = bot.send_message(message.chat.id, "Loading...").message_id
-    #what is judas
-    target = "is"
-    locate = text.find(target)
-    after = text[locate + len(target) + 1:]
-    key = after
-    try:
-        h = wiki.summary(key, sentences=3)
-        h1 = wiki.search(key)
-        bot.edit_message_text(chat_id=message.chat.id, message_id=load, text=h)
-        bot.send_message(message.chat.id, f"Anything else Sir:/n/n{h1}")
-
-    except wiki.exceptions.PageError:
-        h = wiki.search(key)
-        
-        bot.send_message(message.chat.id, f"Page for {key} cannot be found. Perhaps try again with these keywords:/n/n{h}")
-        
-#---CV2---#
-
-
-
-@bot.message_handler(content_types=["photo"])
-def bismillah(message):
-    try:
-        if not message.photo:
-            print("wrong type!")
-        if isinstance(message.photo, list) and len(message.photo) > 0:
-            gambar = message.photo[-1]
-            info = bot.get_file(gambar.file_id)
-        else:
-            print("Non valid photo was send")
-
-        link = f"https://api.telegram.org/file/bot{bot.token}/{info.file_path}"
-        respon = requests.get(link) # download the file
-
-        #save image kekkawan
-        with open("imgb.jpg", "wb") as file:
-            file.write(respon.content)
-            
-        img = cv2.imread("imgb.jpg")
-
-        img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        
-        label = "Human"  # Label text
-        # Set the font and size
-        font = cv2.FONT_HERSHEY_COMPLEX
-        font_scale = 1
-        color = (255, 255, 255)  # White text
-        thickness = 3
-
-        # Use minSize because for not 
-        # bothering with extra-small 
-        # dots that would look like STOP signs
-        stop_data = cv2.CascadeClassifier('detect.xml')
-        
-        found = stop_data.detectMultiScale(img_gray, 
-                                        minSize =(20, 20))
-        
-        # Don't do anything if there's 
-        # no sign
-        amount_found = len(found)
-        
-        if amount_found != 0:
-            
-            # There may be more than one
-            # sign in the image
-            for (x, y, width, height) in found:
-                
-                # We draw a green rectangle around
-                # every recognized sign
-                cv2.rectangle(img_rgb, (x, y), 
-                            (x + height, y + width), 
-                            (85,142,199), 5)
-
-        text_size = cv2.getTextSize(label, font, font_scale, thickness)[0]
-        text_x = x + (width - text_size[0]) // 2  # Center the text
-        text_y = y + height + text_size[1] + 5  # Position below the rectangl
-
-        img_rgb = cv2.putText(img_rgb, label, (text_x, text_y), font, font_scale, color, thickness)
-        img_rgb = cv2.cvtColor(img_rgb, cv2.COLOR_BGR2RGB) 
-        img = img_rgb
-        cv2.imwrite("final.jpg", img)
-
-        with open("final.jpg", "rb") as final:
-            bot.send_photo(message.chat.id, final)
-
-        print("Success!")
-    except Exception as e:
-        print(f"error: {e}")
-
-
-
-#---CV2---#
-
-#--- download ---#
-def t(message):
-    text = message.text
-    if "http" not in message.text.lower():
-        return
-    elif "http" in message.text.lower():
-        if "download" in text.lower():
-            load = bot.send_message(message.chat.id, "Downloading...").message_id
-            target = "download"
-            locate = text.find(target)
-            after = text[locate + len(target) + 1:]
-            link = after
-        elif "download" not in text.lower():
-            link = text
-            load = bot.send_message(message.chat.id, "Downloading...").message_id
+    query = message.text.split("is", 1)[-1].strip()
+    if query:
         try:
-            app = link.split("/")
-            app = app[2]
-            print(app)
-        except IndexError:
-            return
-
-        if "tiktok" in app:
-                # tiktok
-            try:
-                # Specify the TikTok video URL
-                tiktok_url = link  # Replace with your video URL
-                folder = "download/"
-                #folder = "download/"
-                # Configure yt-dlp options
-                ydl_opts = {
-                    'outtmpl': f'{folder}/%(title)s.%(ext)s',  # Specify the download directory
-                    'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]',  # Get best quality
-                    'noplaylist': True,  # Download only the video, not any playlists or extra content
-                }
-
-                # Download the video
-                with y.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([tiktok_url])
-                videof = os.listdir(folder)
-                vfile = None
-
-                for file in videof:
-                    if file.endswith(".mp4"):
-                        vfile = os.path.join(folder, file)
-                        break
-                
-                if vfile:
-                    with open(vfile, "rb") as video:
-                        media = telebot.types.InputMediaVideo(video, "Here you go Sir.")
-                        bot.edit_message_media(media, message.chat.id, load)
-                        print("video sent Successfully")
-                        os.remove(vfile)
-            except y.DownloadError:
-                bot.send_message(message.chat.id, f"Link may be unrecognizable Sir.")
-
-
-
-
-        elif "youtu.be" or "youtube" in app:
-            try:
-                folder = "download/"
-
-                ydl_opts = {
-                    'outtmpl': f'{folder}/%(title)s.%(ext)s',  # Specify the download directory
-                    'format': "best",  # Get best quality
-                }
-
-                with y.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([link])
-                videof = os.listdir(folder)
-                vfile = None
-                mp4_files = [file for file in videof if file.endswith(".mp4")]
-                if mp4_files:  # Check if the list is not empty
-                    # Sort by modification time to find the most recently downloaded video
-                    vfile = max(mp4_files, key=lambda x: os.path.getmtime(os.path.join(folder, x)))
-
-                for file in videof:
-                    if file.endswith(".mp4"):
-                        vfile = os.path.join(folder, file)
-                        break
-                
-                if vfile:
-                    try:
-                        with open(vfile, "rb") as video:
-                            media = telebot.types.InputMediaVideo(video, "Here you go Sir.")
-                            bot.edit_message_media(media, message.chat.id, load)
-                            print("video sent Successfully")
-                    except telebot.apihelper.ApiTelegramException as e:
-                        if "Request Entity Too Large" in str(e):
-                            bot.send_message(message.chat.id, "The media is too large. Please try with a smaller file.")
-                    finally:
-                        if os.path.exists(vfile):
-                            os.remove(vfile)
-                            print(f"Deleted the video file: {vfile}")
-
-            except y.DownloadError:
-                bot.send_message(message.chat.id, f"Link may be unrecognizable Sir.")
-
-        elif "instagram" in app:
-            try:
-                folder = "download/"
-
-                ydl_opts = {
-                    'outtmpl': f'{folder}/%(title)s.%(ext)s',  # Specify the download directory
-                    'format': "best",  # Get best quality
-                }
-
-                with y.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([link])
-                videof = os.listdir(folder)
-                vfile = None
-                mp4_files = [file for file in videof if file.endswith(".mp4")]
-                if mp4_files:  # Check if the list is not empty
-                    # Sort by modification time to find the most recently downloaded video
-                    vfile = max(mp4_files, key=lambda x: os.path.getmtime(os.path.join(folder, x)))
-
-                for file in videof:
-                    if file.endswith(".mp4"):
-                        vfile = os.path.join(folder, file)
-                        break
-                
-                if vfile:
-                    try:
-                        with open(vfile, "rb") as video:
-                            media = telebot.types.InputMediaVideo(video, "Here you go Sir.")
-                            bot.edit_message_media(media, message.chat.id, load)
-                            print("video sent Successfully")
-                    finally:
-                        if os.path.exists(vfile):
-                            os.remove(vfile)
-                            print(f"Deleted the video file: {vfile}")
-        
-            except y.DownloadError:
-                bot.send_message(message.chat.id, f"Link may be unrecognizable Sir.")
-        elif "facebook" in app:
-            try:
-                folder = "download/"
-
-                ydl_opts = {
-                    'outtmpl': f'{folder}/%(title)s.%(ext)s',  # Specify the download directory
-                    'format': "best",  # Get best quality
-                }
-
-                with y.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([link])
-                videof = os.listdir(folder)
-                vfile = None
-                mp4_files = [file for file in videof if file.endswith(".mp4")]
-                if mp4_files:  # Check if the list is not empty
-                    # Sort by modification time to find the most recently downloaded video
-                    vfile = max(mp4_files, key=lambda x: os.path.getmtime(os.path.join(folder, x)))
-
-                for file in videof:
-                    if file.endswith(".mp4"):
-                        vfile = os.path.join(folder, file)
-                        break
-                
-                if vfile:
-                    try:
-                        with open(vfile, "rb") as video:
-                            media = telebot.types.InputMediaVideo(video, "Here you go Sir.")
-                            bot.edit_message_media(media, message.chat.id, load)
-                            print("video sent Successfully")
-                    finally:
-                        if os.path.exists(vfile):
-                            os.remove(vfile)
-                            print(f"Deleted the video file: {vfile}")
-            except y.DownloadError:
-                bot.send_message(message.chat.id, f"Link may be unrecognizable Sir.")
-#---tt download---#
-
-@bot.message_handler(func=lambda message: message.text is not None and not message.photo)
-def take_command(message):
-    print(f"message: {message.text}")
-    command = message.text
-    if "connor" in message.text.lower():
-        print(message.text)
-        
-
-        #---Basic Respond---#
-
-        if ("hey connor") in command.lower():
-            bot.send_message(message.chat.id, "Yes sir, May I help you?")
-
-        #---Search Wikipedia---#
-
-    elif ("what is") in command.lower():
-        tell(message)
-    
-        #---Play youtube---#
-
-    elif "play" in command.lower():
-        play(message)
-    elif "save" in command.lower():
-        save(message)
-    elif "update" in command.lower():
-        update(message)
-    elif "clear" in command.lower():
-        clear(message)
-    elif "command" in command.lower():
-        guide(message)
-    elif "http" in command.lower():
-        t(message)
+            summary = wiki.summary(query, sentences=3)
+            bot.send_message(message.chat.id, summary)
+        except wiki.exceptions.PageError:
+            suggestions = wiki.search(query)
+            bot.send_message(
+                message.chat.id, 
+                f"No page found for '{query}'. Suggestions:\n" + "\n".join(suggestions)
+            )
     else:
-        bismillah(message)
+        bot.send_message(message.chat.id, "No query provided, Sir.")
 
+# Photo processing handler
+@bot.message_handler(content_types=["photo"])
+def process_photo(message):
+    try:
+        photo = message.photo[-1]  # Get the highest resolution photo
+        file_info = bot.get_file(photo.file_id)
+        file_url = f"https://api.telegram.org/file/bot{bot.token}/{file_info.file_path}"
 
+        # Download and process the image
+        response = requests.get(file_url)
+        with open("temp.jpg", "wb") as file:
+            file.write(response.content)
 
+        img = cv2.imread("temp.jpg")
+        img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
+        stop_data = cv2.CascadeClassifier('detect.xml')
+        detections = stop_data.detectMultiScale(img_gray, minSize=(20, 20))
 
+        for (x, y, w, h) in detections:
+            cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.putText(
+                img, "Detected", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2
+            )
+
+        cv2.imwrite("result.jpg", img)
+        with open("result.jpg", "rb") as result:
+            bot.send_photo(message.chat.id, result)
+
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Error processing photo: {e}")
+
+# Download handler
+def download_content(message):
+    url = message.text.split("download", 1)[-1].strip()
+    if url:
+        bot.send_message(message.chat.id, "Downloading...")
+        try:
+            folder = "downloads/"
+            os.makedirs(folder, exist_ok=True)
+            ydl_opts = {'outtmpl': f'{folder}/%(title)s.%(ext)s', 'format': 'best'}
+
+            with y.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+
+            downloaded_files = [
+                os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".mp4")
+            ]
+            if downloaded_files:
+                latest_file = max(downloaded_files, key=os.path.getctime)
+                with open(latest_file, "rb") as video:
+                    bot.send_video(message.chat.id, video)
+                os.remove(latest_file)
+        except Exception as e:
+            bot.send_message(message.chat.id, f"Failed to download: {e}")
+    else:
+        bot.send_message(message.chat.id, "No URL provided, Sir.")
+
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
+    text = message.text.lower()
+    if "connor" in text:
+        bot.send_message(message.chat.id, "Yes, Sir? How can I assist?")
+    elif "what is" in text:
+        tell(message)
+    elif "play" in text:
+        play(message)
+    elif "save" in text:
+        save(message)
+    elif "update" in text:
+        update(message)
+    elif "clear" in text:
+        clear(message)
+    elif "command" in text:
+        guide(message)
+    elif "download" in text:
+        download_content(message)
 
 bot.infinity_polling()
