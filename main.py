@@ -3,7 +3,6 @@ import requests
 import cv2
 import wikipedia as wiki
 import yt_dlp as y
-def from_dotenv
 from dotenv import load_dotenv
 import telebot
 
