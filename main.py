@@ -116,26 +116,40 @@ def download_media(message):
     load = bot.send_message(message.chat.id, "Downloading...").message_id
 
     try:
+        def sanitize_and_truncate_file_name(file_name, max_length=100):
+            file_name = re.sub(r'[\\/*?:"<>|]', '_', file_name)  # Replace invalid characters
+            return file_name[:max_length]  # Truncate to the maximum length
+
         ydl_opts = {
             'outtmpl': 'downloads/%(title)s.%(ext)s',
-            'format': 'best'
+            'format': 'best',
+            'noplaylist': True,  # Download only a single video
         }
+        
         with y.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(link, download=True)
+            info_dict = ydl.extract_info(link, download=False)
             title = info_dict.get('title', 'downloaded_video')
             ext = info_dict.get('ext', 'mp4')
 
-            sanitized_title = sanitize_file_name(title)
-            file_path = f"downloads/{sanitized_title}.{ext}"
+            sanitized_title = sanitize_and_truncate_file_name(title)
+            ydl_opts['outtmpl'] = f'downloads/{sanitized_title}.%(ext)s'
+            
+            # Download the video with the updated template
+            ydl.download([link])
 
-            with open(file_path, "rb") as media:
-                bot.send_document(message.chat.id, media)
-            os.remove(file_path)
+        # Send the downloaded file
+        downloaded_files = os.listdir('downloads')
+        for file in downloaded_files:
+            if file.endswith(('.mp4', '.mp3')):
+                file_path = os.path.join('downloads', file)
+                with open(file_path, "rb") as media:
+                    bot.send_document(message.chat.id, media)
+                os.remove(file_path)
+                break
 
         bot.edit_message_text(chat_id=message.chat.id, message_id=load, text="Download complete, Sir.")
     except Exception as e:
-        bot.send_message(message.chat.id, f"Download failed: {e}")
-
+        bot.edit_message_text(chat_id=message.chat.id, message_id=load, text=f"Download failed: {e}")
 @bot.message_handler(func=lambda msg: True)
 def handle_commands(message):
     if "what is" in message.text.lower():
