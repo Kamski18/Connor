@@ -5,6 +5,7 @@ import os
 import requests
 import cv2
 import yt_dlp as y
+import re
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
@@ -12,9 +13,14 @@ bot = telebot.TeleBot(API_KEY)
 
 store = []
 
+# Utility function to sanitize and truncate file names
+def sanitize_file_name(file_name, max_length=50):
+    file_name = re.sub(r'[\\/*?:"<>|]', '_', file_name)  # Replace invalid characters
+    return file_name[:max_length]  # Truncate to max length
+
 @bot.message_handler(commands=["start"])
 def start(message):
-    pass
+    bot.send_message(message.chat.id, "Welcome, Sir! Use /command for available commands.")
 
 def guide(message):
     commands = (
@@ -29,7 +35,7 @@ def clear(message):
 
 def update(message):
     if store:
-        bot.send_message(message.chat.id, store)
+        bot.send_message(message.chat.id, "\n".join(store))
         bot.send_message(message.chat.id, "Good luck, Sir.")
     else:
         bot.send_message(message.chat.id, "No work has been saved, Sir.")
@@ -115,16 +121,18 @@ def download_media(message):
             'format': 'best'
         }
         with y.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([link])
+            info_dict = ydl.extract_info(link, download=True)
+            title = info_dict.get('title', 'downloaded_video')
+            ext = info_dict.get('ext', 'mp4')
 
-        files = os.listdir('downloads')
-        for file in files:
-            if file.endswith(('.mp4', '.mp3')):
-                file_path = os.path.join('downloads', file)
-                with open(file_path, "rb") as media:
-                    bot.send_document(message.chat.id, media)
-                os.remove(file_path)
-                break
+            sanitized_title = sanitize_file_name(title)
+            file_path = f"downloads/{sanitized_title}.{ext}"
+
+            with open(file_path, "rb") as media:
+                bot.send_document(message.chat.id, media)
+            os.remove(file_path)
+
+        bot.edit_message_text(chat_id=message.chat.id, message_id=load, text="Download complete, Sir.")
     except Exception as e:
         bot.send_message(message.chat.id, f"Download failed: {e}")
 
@@ -144,7 +152,5 @@ def handle_commands(message):
         guide(message)
     elif "http" in message.text.lower():
         download_media(message)
-    else:
-        pass
 
 bot.infinity_polling()
