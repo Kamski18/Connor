@@ -5,12 +5,25 @@ import os
 import requests
 import cv2
 import yt_dlp as y
+import hashlib
+import re
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 bot = telebot.TeleBot(API_KEY)
 
 store = []
+
+# Function to sanitize the filename by removing special characters
+def sanitize_filename(filename):
+    # Replace emojis or special characters with underscores
+    return re.sub(r'[^\w\s.-]', '_', filename)
+
+# Function to generate a short filename based on the sanitized name
+def generate_short_filename(original_name):
+    sanitized_name = sanitize_filename(original_name)
+    # Limit length to 50 characters for safety
+    return f"{sanitized_name[:50]}.mp4"
 
 @bot.message_handler(commands=["start"])
 def start(message):
@@ -104,12 +117,6 @@ def process_image(message):
     except Exception as e:
         print(f"Error processing image: {e}")
 
-import hashlib
-
-def generate_short_filename():
-    # Generate a short unique filename (e.g., "file12345.mp4")
-    return f"file{str(hashlib.md5().hexdigest())[:8]}"
-
 def download_media(message):
     text = message.text
     link = text.partition("download ")[2] if "download" in text.lower() else text
@@ -127,8 +134,8 @@ def download_media(message):
         files = os.listdir('downloads')
         for file in files:
             if file.endswith(('.mp4', '.mp3')):
-                # Use a short filename for the downloaded file
-                short_filename = generate_short_filename() + os.path.splitext(file)[1]
+                # Shorten the filename using the sanitized name
+                short_filename = generate_short_filename(file)
                 new_file_path = os.path.join('downloads', short_filename)
 
                 # Rename the file with the short name
@@ -141,8 +148,6 @@ def download_media(message):
                 break
     except Exception as e:
         bot.send_message(message.chat.id, f"Download failed: {e}")
-
-
 
 @bot.message_handler(func=lambda msg: True)
 def handle_commands(message):
