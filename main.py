@@ -117,10 +117,6 @@ def download_media(message):
     load = bot.send_message(message.chat.id, "Downloading...").message_id
 
     try:
-        def sanitize_and_truncate_file_name(file_name, max_length=100):
-            file_name = re.sub(r'[\\/*?:"<>|]', '_', file_name)  # Replace invalid characters
-            return file_name[:max_length]  # Truncate to the maximum length
-
         ydl_opts = {
             'outtmpl': 'downloads/%(title)s.%(ext)s',
             'format': 'best',
@@ -131,31 +127,33 @@ def download_media(message):
             # Extract information without downloading
             info_dict = ydl.extract_info(link, download=False)
 
-            # Verify structure and retrieve necessary info
-            if isinstance(info_dict, dict) and 'title' in info_dict:
-                title = info_dict.get('title', 'downloaded_video')
-                ext = info_dict.get('ext', 'mp4')
+            # Check if info_dict is a dictionary and contains 'title'
+            if not isinstance(info_dict, dict):
+                raise ValueError("Unexpected response format from yt_dlp.")
+            if 'title' not in info_dict:
+                raise ValueError("Video title not found in the response.")
 
-                # Sanitize and truncate the file name
-                sanitized_title = sanitize_and_truncate_file_name(title)
-                ydl_opts['outtmpl'] = f'downloads/{sanitized_title}.%(ext)s'
+            title = info_dict.get('title', 'downloaded_video')
+            ext = info_dict.get('ext', 'mp4')
 
-                # Download the video with the updated template
-                ydl.download([link])
+            # Sanitize and truncate the file name
+            sanitized_title = sanitize_file_name(title)
+            ydl_opts['outtmpl'] = f'downloads/{sanitized_title}.%(ext)s'
 
-                # Locate the downloaded file
-                downloaded_files = os.listdir('downloads')
-                for file in downloaded_files:
-                    if file.endswith(('.mp4', '.mp3')):
-                        file_path = os.path.join('downloads', file)
-                        with open(file_path, "rb") as media:
-                            bot.send_document(message.chat.id, media)
-                        os.remove(file_path)  # Remove the file after sending
-                        break
+            # Download the video with the updated template
+            ydl.download([link])
 
-                bot.edit_message_text(chat_id=message.chat.id, message_id=load, text="Download complete, Sir.")
-            else:
-                raise ValueError("Invalid video information structure.")
+            # Locate the downloaded file
+            downloaded_files = os.listdir('downloads')
+            for file in downloaded_files:
+                if file.endswith(('.mp4', '.mp3')):
+                    file_path = os.path.join('downloads', file)
+                    with open(file_path, "rb") as media:
+                        bot.send_document(message.chat.id, media)
+                    os.remove(file_path)  # Remove the file after sending
+                    break
+
+            bot.edit_message_text(chat_id=message.chat.id, message_id=load, text="Download complete, Sir.")
     except Exception as e:
         bot.edit_message_text(chat_id=message.chat.id, message_id=load, text=f"Download failed: {e}")
 
