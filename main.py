@@ -104,15 +104,11 @@ def process_image(message):
     except Exception as e:
         print(f"Error processing image: {e}")
 
-import re
+import hashlib
 
-def sanitize_file_name(file_name, max_length=50):
-    # Replace invalid characters with underscores
-    sanitized_name = re.sub(r'[\\/*?:"<>|]', '_', file_name)
-    # Remove the ".part" extension if it exists
-    sanitized_name = sanitized_name.replace('.part', '')
-    # Truncate the name if it exceeds the max length
-    return sanitized_name[:max_length]
+def generate_unique_filename(file_name):
+    # Create a hash of the file name to ensure uniqueness
+    return hashlib.md5(file_name.encode('utf-8')).hexdigest()
 
 def download_media(message):
     text = message.text
@@ -130,20 +126,20 @@ def download_media(message):
         files = os.listdir('downloads')
         for file in files:
             if file.endswith(('.mp4', '.mp3')):
-                # Sanitize the file name before using it
-                sanitized_file_name = sanitize_file_name(file)
-                file_path = os.path.join('downloads', sanitized_file_name)
+                # Generate a unique file name based on the original file name
+                unique_filename = generate_unique_filename(file)
+                file_ext = file.split('.')[-1]
+                new_file_path = os.path.join('downloads', f'{unique_filename}.{file_ext}')
 
-                # Rename the file if necessary
-                os.rename(os.path.join('downloads', file), file_path)
+                # Rename the file with the unique name
+                os.rename(os.path.join('downloads', file), new_file_path)
 
-                with open(file_path, "rb") as media:
+                with open(new_file_path, "rb") as media:
                     bot.send_document(message.chat.id, media)
-                os.remove(file_path)
+                os.remove(new_file_path)
                 break
     except Exception as e:
         bot.send_message(message.chat.id, f"Download failed: {e}")
-
 
 
 @bot.message_handler(func=lambda msg: True)
