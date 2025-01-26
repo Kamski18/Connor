@@ -106,9 +106,11 @@ def process_image(message):
 
 import re
 
-def sanitize_file_name(file_name, max_length=100):
+def sanitize_file_name(file_name, max_length=50):
     # Replace invalid characters with underscores
     sanitized_name = re.sub(r'[\\/*?:"<>|]', '_', file_name)
+    # Remove the ".part" extension if it exists
+    sanitized_name = sanitized_name.replace('.part', '')
     # Truncate the name if it exceeds the max length
     return sanitized_name[:max_length]
 
@@ -141,6 +143,7 @@ def download_media(message):
                 break
     except Exception as e:
         bot.send_message(message.chat.id, f"Download failed: {e}")
+
 
 
 @bot.message_handler(func=lambda msg: True)
