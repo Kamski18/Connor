@@ -106,9 +106,9 @@ def process_image(message):
 
 import hashlib
 
-def generate_unique_filename(file_name):
-    # Create a hash of the file name to ensure uniqueness
-    return hashlib.md5(file_name.encode('utf-8')).hexdigest()
+def generate_short_filename():
+    # Generate a short unique filename (e.g., "file12345.mp4")
+    return f"file{str(hashlib.md5().hexdigest())[:8]}"
 
 def download_media(message):
     text = message.text
@@ -118,28 +118,30 @@ def download_media(message):
     try:
         ydl_opts = {
             'outtmpl': 'downloads/%(title)s.%(ext)s',
-            'format': 'best'
+            'format': 'best',
         }
+
         with y.YoutubeDL(ydl_opts) as ydl:
             ydl.download([link])
 
         files = os.listdir('downloads')
         for file in files:
             if file.endswith(('.mp4', '.mp3')):
-                # Generate a unique file name based on the original file name
-                unique_filename = generate_unique_filename(file)
-                file_ext = file.split('.')[-1]
-                new_file_path = os.path.join('downloads', f'{unique_filename}.{file_ext}')
+                # Use a short filename for the downloaded file
+                short_filename = generate_short_filename() + os.path.splitext(file)[1]
+                new_file_path = os.path.join('downloads', short_filename)
 
-                # Rename the file with the unique name
+                # Rename the file with the short name
                 os.rename(os.path.join('downloads', file), new_file_path)
 
+                # Send the file to the user
                 with open(new_file_path, "rb") as media:
                     bot.send_document(message.chat.id, media)
-                os.remove(new_file_path)
+                os.remove(new_file_path)  # Clean up the file after sending
                 break
     except Exception as e:
         bot.send_message(message.chat.id, f"Download failed: {e}")
+
 
 
 @bot.message_handler(func=lambda msg: True)
