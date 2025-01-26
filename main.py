@@ -104,6 +104,14 @@ def process_image(message):
     except Exception as e:
         print(f"Error processing image: {e}")
 
+import re
+
+def sanitize_file_name(file_name, max_length=100):
+    # Replace invalid characters with underscores
+    sanitized_name = re.sub(r'[\\/*?:"<>|]', '_', file_name)
+    # Truncate the name if it exceeds the max length
+    return sanitized_name[:max_length]
+
 def download_media(message):
     text = message.text
     link = text.partition("download ")[2] if "download" in text.lower() else text
@@ -120,13 +128,20 @@ def download_media(message):
         files = os.listdir('downloads')
         for file in files:
             if file.endswith(('.mp4', '.mp3')):
-                file_path = os.path.join('downloads', file)
+                # Sanitize the file name before using it
+                sanitized_file_name = sanitize_file_name(file)
+                file_path = os.path.join('downloads', sanitized_file_name)
+
+                # Rename the file if necessary
+                os.rename(os.path.join('downloads', file), file_path)
+
                 with open(file_path, "rb") as media:
                     bot.send_document(message.chat.id, media)
                 os.remove(file_path)
                 break
     except Exception as e:
         bot.send_message(message.chat.id, f"Download failed: {e}")
+
 
 @bot.message_handler(func=lambda msg: True)
 def handle_commands(message):
