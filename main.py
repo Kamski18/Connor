@@ -117,6 +117,9 @@ def process_image(message):
     except Exception as e:
         print(f"Error processing image: {e}")
 
+DOWNLOAD_FOLDER = "downloads"
+os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)  # Ensure the folder exists
+
 def get_facebook_direct_link(link):
     """ Converts Facebook shared links into direct video links """
     if "facebook.com/share/" in link:
