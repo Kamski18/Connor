@@ -117,35 +117,50 @@ def process_image(message):
     except Exception as e:
         print(f"Error processing image: {e}")
 
+def get_facebook_direct_link(link):
+    """ Converts Facebook shared links into direct video links """
+    if "facebook.com/share/" in link:
+        bot.send_message(message.chat.id, "Sir, this is a shared link. Fetching the direct video link...")
+
+        # Extract possible video ID from redirect link
+        video_id_match = re.search(r'fbid=(\d+)', link)
+        if video_id_match:
+            video_id = video_id_match.group(1)
+            return f"https://www.facebook.com/watch/?v={video_id}"
+
+    return link  # Return original if no match found
+
 def download_media(message):
     text = message.text
     link = text.partition("download ")[2] if "download" in text.lower() else text
+    direct_link = get_facebook_direct_link(link)  # Convert shared link to direct link
+
     load = bot.send_message(message.chat.id, "Downloading...").message_id
 
     try:
         ydl_opts = {
-            'outtmpl': 'downloads/%(title)s.%(ext)s',
-            'format': 'best',
+            'outtmpl': f'{DOWNLOAD_FOLDER}/%(title)s.%(ext)s',
+            'format': 'best'
         }
 
         with y.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([link])
+            ydl.download([direct_link])  # Use extracted direct link
 
-        files = os.listdir('downloads')
+        files = os.listdir(DOWNLOAD_FOLDER)
         for file in files:
             if file.endswith(('.mp4', '.mp3')):
-                # Shorten the filename using the sanitized name
-                short_filename = generate_short_filename(file)
-                new_file_path = os.path.join('downloads', short_filename)
+                unique_filename = generate_unique_filename(file)
+                new_file_path = os.path.join(DOWNLOAD_FOLDER, unique_filename)
 
-                # Rename the file with the short name
-                os.rename(os.path.join('downloads', file), new_file_path)
+                os.rename(os.path.join(DOWNLOAD_FOLDER, file), new_file_path)
 
-                # Send the file to the user
                 with open(new_file_path, "rb") as media:
                     bot.send_document(message.chat.id, media)
-                os.remove(new_file_path)  # Clean up the file after sending
+                
+                os.remove(new_file_path)  # Clean up
                 break
+    except y.utils.DownloadError:
+        bot.send_message(message.chat.id, "Failed to download video, Sir. Ensure it's public.")
     except Exception as e:
         bot.send_message(message.chat.id, f"Download failed: {e}")
 
