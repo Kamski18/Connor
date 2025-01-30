@@ -120,7 +120,7 @@ def process_image(message):
 def get_facebook_direct_link(link):
     """ Converts Facebook shared links into direct video links """
     if "facebook.com/share/" in link:
-        bot.send_message(message.chat.id, "Sir, this is a shared link. Fetching the direct video link...")
+        #bot.send_message(message.chat.id, "Sir, this is a shared link. Fetching the direct video link...")
 
         # Extract possible video ID from redirect link
         video_id_match = re.search(r'fbid=(\d+)', link)
