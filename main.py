@@ -5,25 +5,12 @@ import os
 import requests
 import cv2
 import yt_dlp as y
-import hashlib
-import re
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 bot = telebot.TeleBot(API_KEY)
 
 store = []
-
-# Function to sanitize the filename by removing special characters
-def sanitize_filename(filename):
-    # Replace emojis or special characters with underscores
-    return re.sub(r'[^\w\s.-]', '_', filename)
-
-# Function to generate a short filename based on the sanitized name
-def generate_short_filename(original_name):
-    sanitized_name = sanitize_filename(original_name)
-    # Limit length to 50 characters for safety
-    return f"{sanitized_name[:50]}.mp4"
 
 @bot.message_handler(commands=["start"])
 def start(message):
@@ -117,53 +104,27 @@ def process_image(message):
     except Exception as e:
         print(f"Error processing image: {e}")
 
-DOWNLOAD_FOLDER = "downloads"
-os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)  # Ensure the folder exists
-
-def get_facebook_direct_link(link):
-    """ Converts Facebook shared links into direct video links """
-    if "facebook.com/share/" in link:
-        #bot.send_message(message.chat.id, "Sir, this is a shared link. Fetching the direct video link...")
-
-        # Extract possible video ID from redirect link
-        video_id_match = re.search(r'fbid=(\d+)', link)
-        if video_id_match:
-            video_id = video_id_match.group(1)
-            return f"https://www.facebook.com/watch/?v={video_id}"
-
-    return link  # Return original if no match found
-
 def download_media(message):
     text = message.text
     link = text.partition("download ")[2] if "download" in text.lower() else text
-    direct_link = get_facebook_direct_link(link)  # Convert shared link to direct link
-
     load = bot.send_message(message.chat.id, "Downloading...").message_id
 
     try:
         ydl_opts = {
-            'outtmpl': f'{DOWNLOAD_FOLDER}/%(title)s.%(ext)s',
+            'outtmpl': 'downloads/%(title)s.%(ext)s',
             'format': 'best'
         }
-
         with y.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([direct_link])  # Use extracted direct link
+            ydl.download([link])
 
-        files = os.listdir(DOWNLOAD_FOLDER)
+        files = os.listdir('downloads')
         for file in files:
             if file.endswith(('.mp4', '.mp3')):
-                unique_filename = generate_unique_filename(file)
-                new_file_path = os.path.join(DOWNLOAD_FOLDER, unique_filename)
-
-                os.rename(os.path.join(DOWNLOAD_FOLDER, file), new_file_path)
-
-                with open(new_file_path, "rb") as media:
+                file_path = os.path.join('downloads', file)
+                with open(file_path, "rb") as media:
                     bot.send_document(message.chat.id, media)
-                
-                os.remove(new_file_path)  # Clean up
+                os.remove(file_path)
                 break
-    except y.utils.DownloadError:
-        bot.send_message(message.chat.id, "Failed to download video, Sir. Ensure it's public.")
     except Exception as e:
         bot.send_message(message.chat.id, f"Download failed: {e}")
 
