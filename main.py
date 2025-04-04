@@ -106,27 +106,54 @@ def process_image(message):
 
 def download_media(message):
     text = message.text
-    link = text.partition("download ")[2] if "download" in text.lower() else text
-    load = bot.send_message(message.chat.id, "Downloading...").message_id
+    if text.lower().startswith("mp3 "):
+        link = text.partition("mp3 ")[2]
+        load = bot.send_message(message.chat.id, "Downloading audio...").message_id
 
-    try:
-        ydl_opts = {
-            'outtmpl': 'downloads/%(title)s.%(ext)s',
-            'format': 'best'
-        }
-        with y.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([link])
+        try:
+            ydl_opts = {
+                'format': 'bestaudio/best',
+                'outtmpl': 'downloads/%(title)s.%(ext)s',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+            }
+            with y.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([link])
 
-        files = os.listdir('downloads')
-        for file in files:
-            if file.endswith(('.mp4', '.mp3')):
-                file_path = os.path.join('downloads', file)
-                with open(file_path, "rb") as media:
-                    bot.send_document(message.chat.id, media)
-                os.remove(file_path)
-                break
-    except Exception as e:
-        bot.send_message(message.chat.id, f"Download failed: {e}")
+            files = os.listdir('downloads')
+            for file in files:
+                if file.endswith('.mp3'):
+                    file_path = os.path.join('downloads', file)
+                    with open(file_path, "rb") as audio:
+                        bot.send_audio(message.chat.id, audio)
+                    os.remove(file_path)
+                    break
+        except Exception as e:
+            bot.send_message(message.chat.id, f"Download failed: {e}")
+    else:
+        load = bot.send_message(message.chat.id, "Downloading...").message_id
+
+        try:
+            ydl_opts = {
+                'outtmpl': 'downloads/%(title)s.%(ext)s',
+                'format': 'best'
+            }
+            with y.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([link])
+
+            files = os.listdir('downloads')
+            for file in files:
+                if file.endswith(('.mp4', '.mp3')):
+                    file_path = os.path.join('downloads', file)
+                    with open(file_path, "rb") as media:
+                        bot.send_document(message.chat.id, media)
+                    os.remove(file_path)
+                    break
+        except Exception as e:
+            bot.send_message(message.chat.id, f"Download failed: {e}")
 
 @bot.message_handler(func=lambda msg: True)
 def handle_commands(message):
@@ -142,7 +169,7 @@ def handle_commands(message):
         clear(message)
     elif "command" in message.text.lower():
         guide(message)
-    elif "http" in message.text.lower():
+    elif "http" or "mp3"in message.text.lower():
         download_media(message)
     else:
         pass
