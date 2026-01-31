@@ -1,177 +1,114 @@
+import os
+import uuid
+import shutil
 import telebot
 from dotenv import load_dotenv
-import wikipedia as wiki
-import os
-import requests
-import cv2
-import yt_dlp as y
+import yt_dlp
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
-bot = telebot.TeleBot(API_KEY)
 
-store = []
+if not API_KEY:
+    raise ValueError("API_KEY not set in environment variables")
 
-@bot.message_handler(commands=["start"])
-def start(message):
-    pass
+bot = telebot.TeleBot(API_KEY, parse_mode="HTML")
 
+
+# ---------- HELP / START ----------
+@bot.message_handler(commands=["start", "help"])
 def guide(message):
     commands = (
-        "save\nupdate\nclear\nplay\ncommand\n\npublic downloader\n"
-        "yt(short or not)\ntiktok\ninstagram\nfacebook"
+        "<b>Commands:</b>\n"
+        "play <song name> — Get YouTube search link\n"
+        "mp3 <youtube url> — Download audio\n"
+        "<youtube/tiktok/instagram/facebook url> — Download video"
     )
-    bot.send_message(message.chat.id, commands)
+    bot.reply_to(message, commands)
 
-def clear(message):
-    store.clear()
-    bot.send_message(message.chat.id, "All work has been cleared, Sir.")
 
-def update(message):
-    if store:
-        bot.send_message(message.chat.id, store)
-        bot.send_message(message.chat.id, "Good luck, Sir.")
-    else:
-        bot.send_message(message.chat.id, "No work has been saved, Sir.")
-
-def save(message):
-    text = message.text
-    load = bot.send_message(message.chat.id, "Loading...").message_id
-    after = text.partition("save ")[2].lower()
-    try:
-        store.append(after)
-        bot.edit_message_text(chat_id=message.chat.id, message_id=load, text="All work has been saved, Sir.")
-    except Exception:
-        bot.send_message(message.chat.id, "Unable to save it, Sir.")
-
+# ---------- YOUTUBE SEARCH ----------
 def play(message):
-    text = message.text
-    load = bot.send_message(message.chat.id, "Loading...").message_id
-    after = text.partition("play ")[2].lower()
-    try:
-        link = f"https://www.youtube.com/results?search_query={after.replace(' ', '+')}"
-        bot.edit_message_text(chat_id=message.chat.id, message_id=load, text=link)
-    except Exception:
-        bot.send_message(message.chat.id, "Unable to search for it, Sir.")
+    query = message.text.partition("play ")[2].strip()
+    if not query:
+        bot.reply_to(message, "Usage: play <song name>")
+        return
 
-def tell(message):
-    text = message.text
-    load = bot.send_message(message.chat.id, "Loading...").message_id
-    after = text.partition("is ")[2]
-    try:
-        summary = wiki.summary(after, sentences=3)
-        suggestions = wiki.search(after)
-        bot.edit_message_text(chat_id=message.chat.id, message_id=load, text=summary)
-        bot.send_message(message.chat.id, f"Anything else, Sir?\n\n{suggestions}")
-    except wiki.exceptions.PageError:
-        suggestions = wiki.search(after)
-        bot.send_message(message.chat.id, f"Page for {after} cannot be found. Try these keywords:\n\n{suggestions}")
+    link = f"https://www.youtube.com/results?search_query={query.replace(' ', '+')}"
+    bot.reply_to(message, link)
 
-@bot.message_handler(content_types=["photo"])
-def process_image(message):
-    try:
-        if not message.photo:
-            return
-        photo = message.photo[-1]
-        file_info = bot.get_file(photo.file_id)
-        file_path = f"https://api.telegram.org/file/bot{bot.token}/{file_info.file_path}"
-        response = requests.get(file_path)
 
-        with open("img.jpg", "wb") as file:
-            file.write(response.content)
-
-        img = cv2.imread("img.jpg")
-        img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-        label = "Human"
-        font = cv2.FONT_HERSHEY_COMPLEX
-        color = (255, 255, 255)
-        thickness = 3
-        stop_data = cv2.CascadeClassifier('detect.xml')
-
-        detections = stop_data.detectMultiScale(img_gray, minSize=(20, 20))
-        for (x, y, w, h) in detections:
-            cv2.rectangle(img_rgb, (x, y), (x + w, y + h), (85, 142, 199), 5)
-            text_size = cv2.getTextSize(label, font, 1, thickness)[0]
-            text_x = x + (w - text_size[0]) // 2
-            text_y = y + h + text_size[1] + 5
-            cv2.putText(img_rgb, label, (text_x, text_y), font, 1, color, thickness)
-
-        cv2.imwrite("final.jpg", img_rgb)
-        with open("final.jpg", "rb") as final_image:
-            bot.send_photo(message.chat.id, final_image)
-    except Exception as e:
-        print(f"Error processing image: {e}")
-
+# ---------- DOWNLOAD HANDLER ----------
 def download_media(message):
-    text = message.text
-    if text.lower().startswith("mp3 "):
-        link = text.partition("mp3 ")[2]
-        load = bot.send_message(message.chat.id, "Downloading audio...").message_id
+    text = message.text.strip()
+    user_id = message.from_user.id
 
-        try:
-            ydl_opts = {
-                'format': 'bestaudio/best',
-                'outtmpl': 'downloads/%(title)s.%(ext)s',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
-                }],
-            }
-            with y.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([link])
+    # Create unique temp directory per request
+    temp_dir = f"downloads/{user_id}_{uuid.uuid4().hex}"
+    os.makedirs(temp_dir, exist_ok=True)
 
-            files = os.listdir('downloads')
-            for file in files:
-                if file.endswith('.mp3'):
-                    file_path = os.path.join('downloads', file)
-                    with open(file_path, "rb") as audio:
-                        bot.send_audio(message.chat.id, audio)
-                    os.remove(file_path)
-                    break
-        except Exception as e:
-            bot.send_message(message.chat.id, f"Download failed: {e}")
-    else:
-        load = bot.send_message(message.chat.id, "Downloading...").message_id
+    is_mp3 = text.lower().startswith("mp3 ")
+    link = text.partition(" ")[2] if is_mp3 else text
 
-        try:
-            ydl_opts = {
-                'outtmpl': 'downloads/%(title)s.%(ext)s',
-                'format': 'best'
-            }
-            with y.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([link])
+    status = bot.reply_to(message, "⏳ Downloading...")
 
-            files = os.listdir('downloads')
-            for file in files:
-                if file.endswith(('.mp4', '.mp3')):
-                    file_path = os.path.join('downloads', file)
-                    with open(file_path, "rb") as media:
-                        bot.send_document(message.chat.id, media)
-                    os.remove(file_path)
-                    break
-        except Exception as e:
-            bot.send_message(message.chat.id, f"Download failed: {e}")
+    try:
+        ydl_opts = {
+            "outtmpl": f"{temp_dir}/%(title)s.%(ext)s",
+            "noplaylist": True,
+            "quiet": True,
+            "restrictfilenames": True,
+            "format": "bestaudio/best" if is_mp3 else "bestvideo+bestaudio/best",
+        }
 
-@bot.message_handler(func=lambda msg: True)
-def handle_commands(message):
-    if "what is" in message.text.lower():
-        tell(message)
-    elif "play" in message.text.lower():
+        if is_mp3:
+            ydl_opts["postprocessors"] = [{
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "192",
+            }]
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([link])
+
+        # Find downloaded file
+        file_path = None
+        for f in os.listdir(temp_dir):
+            file_path = os.path.join(temp_dir, f)
+            break
+
+        if not file_path:
+            raise Exception("File not found after download.")
+
+        with open(file_path, "rb") as media:
+            if is_mp3:
+                bot.send_audio(message.chat.id, media)
+            else:
+                bot.send_document(message.chat.id, media)
+
+        bot.delete_message(message.chat.id, status.message_id)
+
+    except Exception as e:
+        bot.edit_message_text(f"❌ Download failed:\n<code>{e}</code>",
+                              message.chat.id, status.message_id)
+
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+# ---------- MESSAGE ROUTER ----------
+@bot.message_handler(func=lambda msg: True, content_types=["text"])
+def handle_messages(message):
+    text = message.text.lower()
+
+    if text.startswith("play "):
         play(message)
-    elif "save" in message.text.lower():
-        save(message)
-    elif "update" in message.text.lower():
-        update(message)
-    elif "clear" in message.text.lower():
-        clear(message)
-    elif "command" in message.text.lower():
-        guide(message)
-    elif "http" or "mp3"in message.text.lower():
-        download_media(message)
-    else:
-        pass
 
-bot.infinity_polling()
+    elif text.startswith("mp3 ") or text.startswith("http"):
+        download_media(message)
+
+    elif text in ["command", "commands", "help"]:
+        guide(message)
+
+
+print("Bot is running...")
+bot.infinity_polling(skip_pending=True)
