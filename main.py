@@ -11,7 +11,7 @@ API_KEY = os.getenv("API_KEY")
 if not API_KEY:
     raise ValueError("API_KEY not set in environment variables")
 
-bot = telebot.TeleBot(API_KEY, parse_mode="HTML")
+bot = telebot.TeleBot(API_KEY)
 
 
 # ---------- HELP / START ----------
@@ -23,7 +23,7 @@ def guide(message):
         "mp3 <youtube url> — Download audio\n"
         "<youtube/tiktok/instagram/facebook url> — Download video"
     )
-    bot.reply_to(message, commands)
+    bot.reply_to(message, commands, parse_mode="HTML")
 
 
 # ---------- YOUTUBE SEARCH ----------
@@ -89,7 +89,7 @@ def download_media(message):
 
     except Exception as e:
         bot.edit_message_text(f"❌ Download failed:\n<code>{e}</code>",
-                              message.chat.id, status.message_id)
+                              message.chat.id, status.message_id, parse_mode="HTML")
 
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
