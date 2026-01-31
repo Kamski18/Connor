@@ -49,6 +49,7 @@ def download_audio(chat_id, url, status_msg_id):
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": "mp3",
                 "preferredquality": "192",
+                "cookiefile": "cookies.txt" 
             }],
             "quiet": True
         }
