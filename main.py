@@ -1,114 +1,133 @@
 import os
-import uuid
-import shutil
-import telebot
 from dotenv import load_dotenv
+import telebot
 import yt_dlp
 
 load_dotenv()
-API_KEY = os.getenv("API_KEY")
 
-if not API_KEY:
-    raise ValueError("API_KEY not set in environment variables")
+TOKEN = os.getenv("API_KEY")
+bot = telebot.TeleBot(TOKEN, parse_mode=None)  # Disable HTML parsing
 
-bot = telebot.TeleBot(API_KEY)
+DOWNLOAD_DIR = "downloads"
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 
-# ---------- HELP / START ----------
-@bot.message_handler(commands=["start", "help"])
+# ===================== COMMANDS =====================
+
+@bot.message_handler(commands=["start", "help", "command"])
 def guide(message):
     commands = (
-        "<b>Commands:</b>\n"
-        "play <song name> — Get YouTube search link\n"
-        "mp3 <youtube url> — Download audio\n"
-        "<youtube/tiktok/instagram/facebook url> — Download video"
+        "Commands:\n"
+        "play - song name → Get YouTube search link\n"
+        "mp3 youtube_url → Download audio\n"
+        "Send a video URL → Download video"
     )
-    bot.reply_to(message, commands, parse_mode="HTML")
+    bot.reply_to(message, commands)
 
 
-# ---------- YOUTUBE SEARCH ----------
+# ===================== PLAY SEARCH =====================
+
 def play(message):
     query = message.text.partition("play ")[2].strip()
     if not query:
-        bot.reply_to(message, "Usage: play <song name>")
+        bot.reply_to(message, "Give a song name after 'play'")
         return
 
-    link = f"https://www.youtube.com/results?search_query={query.replace(' ', '+')}"
-    bot.reply_to(message, link)
+    search_url = f"https://www.youtube.com/results?search_query={query.replace(' ', '+')}"
+    bot.reply_to(message, search_url)
 
 
-# ---------- DOWNLOAD HANDLER ----------
-def download_media(message):
-    text = message.text.strip()
-    user_id = message.from_user.id
+# ===================== DOWNLOADERS =====================
 
-    # Create unique temp directory per request
-    temp_dir = f"downloads/{user_id}_{uuid.uuid4().hex}"
-    os.makedirs(temp_dir, exist_ok=True)
-
-    is_mp3 = text.lower().startswith("mp3 ")
-    link = text.partition(" ")[2] if is_mp3 else text
-
-    status = bot.reply_to(message, "⏳ Downloading...")
-
+def download_audio(chat_id, url, status_msg_id):
     try:
         ydl_opts = {
-            "outtmpl": f"{temp_dir}/%(title)s.%(ext)s",
+            "format": "bestaudio/best",
+            "outtmpl": f"{DOWNLOAD_DIR}/%(title).80s.%(ext)s",
             "noplaylist": True,
-            "quiet": True,
-            "restrictfilenames": True,
-            "format": "bestaudio/best" if is_mp3 else "bestvideo+bestaudio/best",
-        }
-
-        if is_mp3:
-            ydl_opts["postprocessors"] = [{
+            "postprocessors": [{
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": "mp3",
                 "preferredquality": "192",
-            }]
+            }],
+            "quiet": True
+        }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([link])
+            ydl.download([url])
 
-        # Find downloaded file
-        file_path = None
-        for f in os.listdir(temp_dir):
-            file_path = os.path.join(temp_dir, f)
-            break
+        for file in os.listdir(DOWNLOAD_DIR):
+            if file.endswith(".mp3"):
+                path = os.path.join(DOWNLOAD_DIR, file)
+                with open(path, "rb") as audio:
+                    bot.send_audio(chat_id, audio)
+                os.remove(path)
+                break
 
-        if not file_path:
-            raise Exception("File not found after download.")
-
-        with open(file_path, "rb") as media:
-            if is_mp3:
-                bot.send_audio(message.chat.id, media)
-            else:
-                bot.send_document(message.chat.id, media)
-
-        bot.delete_message(message.chat.id, status.message_id)
+        bot.delete_message(chat_id, status_msg_id)
 
     except Exception as e:
-        bot.edit_message_text(f"❌ Download failed:\n<code>{e}</code>",
-                              message.chat.id, status.message_id, parse_mode="HTML")
-
-    finally:
-        shutil.rmtree(temp_dir, ignore_errors=True)
+        bot.send_message(chat_id, f"Audio download failed:\n{e}")
 
 
-# ---------- MESSAGE ROUTER ----------
-@bot.message_handler(func=lambda msg: True, content_types=["text"])
+def download_video(chat_id, url, status_msg_id):
+    try:
+        ydl_opts = {
+            "format": "best",
+            "outtmpl": f"{DOWNLOAD_DIR}/%(title).80s.%(ext)s",
+            "noplaylist": True,
+            "quiet": True
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+
+        for file in os.listdir(DOWNLOAD_DIR):
+            if file.endswith((".mp4", ".mkv", ".webm")):
+                path = os.path.join(DOWNLOAD_DIR, file)
+                with open(path, "rb") as vid:
+                    bot.send_document(chat_id, vid)
+                os.remove(path)
+                break
+
+        bot.delete_message(chat_id, status_msg_id)
+
+    except Exception as e:
+        bot.send_message(chat_id, f"Video download failed:\n{e}")
+
+
+# ===================== MESSAGE ROUTER =====================
+
+@bot.message_handler(func=lambda m: True)
 def handle_messages(message):
-    text = message.text.lower()
+    text = message.text.strip()
 
-    if text.startswith("play "):
+    # PLAY SEARCH
+    if text.lower().startswith("play "):
         play(message)
+        return
 
-    elif text.startswith("mp3 ") or text.startswith("http"):
-        download_media(message)
+    # MP3 DOWNLOAD
+    if text.lower().startswith("mp3 "):
+        url = text.partition("mp3 ")[2].strip()
+        status = bot.send_message(message.chat.id, "Downloading audio...")
+        download_audio(message.chat.id, url, status.message_id)
+        return
 
-    elif text in ["command", "commands", "help"]:
-        guide(message)
+    # VIDEO DOWNLOAD (URL DETECT)
+    if text.startswith("http"):
+        status = bot.send_message(message.chat.id, "Downloading video...")
+        download_video(message.chat.id, text, status.message_id)
+        return
 
+
+# ===================== START BOT =====================
 
 print("Bot is running...")
-bot.infinity_polling(skip_pending=True)
+
+bot.infinity_polling(
+    skip_pending=True,
+    timeout=30,
+    long_polling_timeout=30,
+    none_stop=True
+)
